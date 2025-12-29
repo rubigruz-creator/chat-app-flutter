@@ -1,8 +1,14 @@
 // ⚠️ ВАЖНО: Измени IP-адрес на адрес твоего компьютера
 // Найди IP команду "ipconfig" (Windows) или "ifconfig" (Linux/Mac)
 
-const String BASE_URL = 'http://10.0.0.10:3000';
-const String SOCKET_URL = 'http://10.0.0.10:3000';
+// const String BASE_URL = 'http://10.0.0.10:3000';
+// const String SOCKET_URL = 'http://10.0.0.10:3000';
+
+
+const String BASE_URL = 'http://155.212.191.117:8080';
+const String SOCKET_URL = 'http://155.212.191.117:8080';
+
+
 
 // Для эмулятора Android:
 // const String BASE_URL = 'http://10.0.2.2:3000';
