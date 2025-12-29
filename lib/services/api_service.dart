@@ -6,7 +6,7 @@ import '../models/chat.dart';
 import '../models/message.dart';
 
 class ApiService {
-  static const String baseUrl = API_BASE_URL;
+  static const String baseUrl = BASE_URL;  // ✅ ИСПРАВЛЕНО: API_BASE_URL → BASE_URL
 
   // ========== ПОЛЬЗОВАТЕЛИ ==========
 
@@ -25,34 +25,31 @@ class ApiService {
     }
   }
 
-/// Получить всех пользователей
-static Future<List<User>> getUsers() async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/users'),
-      headers: {'Content-Type': 'application/json'},
-    ).timeout(const Duration(seconds: 10));
+  /// Получить всех пользователей
+  static Future<List<User>> getUsers() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      // Проверяем, что это список
-      if (data is List) {
-        return data.map((json) => User.fromJson(json)).toList();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data.map((json) => User.fromJson(json)).toList();
+        } else {
+          print('Ответ сервера не список: $data');
+          return [];
+        }
       } else {
-        print('Ответ сервера не список: $data');
-        return [];
+        print('Ошибка HTTP: ${response.statusCode} - ${response.body}');
+        throw Exception('Ошибка получения пользователей');
       }
-    } else {
-      print('Ошибка HTTP: ${response.statusCode} - ${response.body}');
-      throw Exception('Ошибка получения пользователей');
+    } catch (e) {
+      print('Ошибка загрузки пользователей: $e');
+      rethrow;
     }
-  } catch (e) {
-    print('Ошибка загрузки пользователей: $e');
-    rethrow;
   }
-}
-
-
 
   /// Получить пользователя по ID
   static Future<User> getUserById(String userId) async {
@@ -69,33 +66,31 @@ static Future<List<User>> getUsers() async {
 
   // ========== ЧАТЫ ==========
 
-/// Получить чаты пользователя
-static Future<List<Chat>> getUserChats(String userId) async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/chats?userId=$userId'),
-      headers: {'Content-Type': 'application/json'},
-    ).timeout(const Duration(seconds: 10));
+  /// Получить чаты пользователя
+  static Future<List<Chat>> getUserChats(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chats?userId=$userId'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data is List) {
-        return data.map((json) => Chat.fromJson(json)).toList();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data.map((json) => Chat.fromJson(json)).toList();
+        } else {
+          print('Ответ сервера не список чатов: $data');
+          return [];
+        }
       } else {
-        print('Ответ сервера не список чатов: $data');
-        return [];
+        print('Ошибка HTTP чаты: ${response.statusCode} - ${response.body}');
+        throw Exception('Ошибка получения чатов');
       }
-    } else {
-      print('Ошибка HTTP чаты: ${response.statusCode} - ${response.body}');
-      throw Exception('Ошибка получения чатов');
+    } catch (e) {
+      print('Ошибка загрузки чатов: $e');
+      rethrow;
     }
-  } catch (e) {
-    print('Ошибка загрузки чатов: $e');
-    rethrow;
   }
-}
-
-
 
   /// Создать групповой чат
   static Future<Chat> createGroupChat(String title, List<String> memberIds) async {
@@ -169,7 +164,6 @@ static Future<List<Chat>> getUserChats(String userId) async {
     }
     return [];
   }
-
 
   /// Отправить сообщение
   static Future<Message> sendMessage(String chatId, String userId, String text) async {

@@ -1,6 +1,6 @@
-import '../services/socket_service.dart';  // ← ДОБАВЬ ЭТОТ ИМПОРТ
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
 import '../models/user.dart';
 import '../utils/constants.dart';
 import 'chat_list_screen.dart';
@@ -16,8 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _nameController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  bool _showExistingUsers = false;
   List<User> _existingUsers = [];
+  bool _usersLoaded = false;
 
   @override
   void initState() {
@@ -28,15 +28,23 @@ class _LoginScreenState extends State<LoginScreen> {
   void _loadExistingUsers() async {
     try {
       final users = await ApiService.getUsers();
-      setState(() {
-        _existingUsers = users;
-      });
+      if (mounted) {
+        setState(() {
+          _existingUsers = users;
+          _usersLoaded = true;
+        });
+      }
     } catch (e) {
       print('Ошибка загрузки пользователей: $e');
+      if (mounted) {
+        setState(() {
+          _usersLoaded = true;
+        });
+      }
     }
   }
 
-  void _loginWithExistingUser(User user) async {
+  void _loginWithExistingUser(User user) {
     _navigateToChatList(user);
   }
 
@@ -57,17 +65,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final user = await ApiService.createUser(name);
-      _navigateToChatList(user);
+      if (mounted) {
+        _navigateToChatList(user);
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Ошибка: ${e.toString()}';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Ошибка: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _navigateToChatList(User user) {    
-    SocketService().initialize();  // ← ДОБАВЬ ПЕРЕД НАВИГАЦИЕЙ
+  void _navigateToChatList(User user) {
+    SocketService().initialize();
     SocketService().connect();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -76,70 +88,123 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: AppConstants.backgroundColor,
-    body: SafeArea(
-      child: SingleChildScrollView(  // ← Делаем прокрутку
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ... остальной код до TextField ...
-            
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Введите своё имя',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppConstants.backgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 32),
+              const Icon(
+                Icons.chat,
+                size: 64,
+                color: AppConstants.primaryColor,
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                'Chat App',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-                prefixIcon: const Icon(Icons.person),
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _createAndLogin,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                backgroundColor: AppConstants.primaryColor,
+              const SizedBox(height: 32),
+              const Text(
+                'Создать новый аккаунт:',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              child: _isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Создать аккаунт', style: TextStyle(color: Colors.white)),
-            ),
-            
-            // ← ПРИНУДИТЕЛЬНО ДОБАВЛЯЕМ КНОПКУ ДЛЯ ТЕСТА
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _loginWithExistingUser(User(id: 'test-alice', name: 'Alice', createdAt: DateTime.now())),
-              child: const Text('Войти как Alice (тест)'),
-            ),
-            
-            const SizedBox(height: 32),
-            if (_existingUsers.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Введите своё имя',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+                  ),
+                  prefixIcon: const Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              ElevatedButton(
+                onPressed: _isLoading ? null : _createAndLogin,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: AppConstants.primaryColor,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Создать аккаунт',
+                        style: TextStyle(color: Colors.white),
+                      ),
+              ),
+              const SizedBox(height: 32),
               const Divider(),
               const SizedBox(height: 16),
-              Text('Пользователи (${_existingUsers.length}):'),
-              ..._existingUsers.map((user) => ListTile(
-                onTap: () => _loginWithExistingUser(user),
-                title: Text(user.name),
-                trailing: const Icon(Icons.arrow_forward),
-              )),
-            ] else ...[
-              const Text('Список пуст — ждём загрузки'),
+              const Text(
+                'Или выбери существующего пользователя:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              if (!_usersLoaded)
+                const Center(
+                  child: CircularProgressIndicator(),
+                )
+              else if (_existingUsers.isEmpty)
+                const Center(
+                  child: Text('Пользователей нет'),
+                )
+              else
+                Column(
+                  children: _existingUsers.map((user) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ElevatedButton(
+                        onPressed: () => _loginWithExistingUser(user),
+                        style: ElevatedButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppConstants.textPrimary,
+                          side: const BorderSide(color: AppConstants.dividerColor),
+                        ),
+                        child: Text(user.name),
+                      ),
+                    );
+                  }).toList(),
+                ),
             ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
-
-
-
-
+    );
+  }
 
   @override
   void dispose() {
